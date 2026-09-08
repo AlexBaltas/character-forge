@@ -1,0 +1,36 @@
+name: Deploy Character Forge
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Copy site files to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "index.html,styles.css,script.js"
+          target: "/home/ec2-user/"
+
+      - name: Deploy files to Nginx
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            sudo cp /home/ec2-user/index.html /usr/share/nginx/html/
+            sudo cp /home/ec2-user/styles.css /usr/share/nginx/html/
+            sudo cp /home/ec2-user/script.js /usr/share/nginx/html/
+
+            
