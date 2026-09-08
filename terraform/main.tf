@@ -1,10 +1,120 @@
-resource "aws_vpc" "Charactar_forge" {
-  cidr_block = "10.0.0.16"
+resource "aws_vpc" "Character_forge" {
+  cidr_block           = "10.0.0.0/16"
   enable_dns_hostnames = true
-  enable_dns_support = true
+  enable_dns_support   = true
 
   tags = {
-    name = "character-forge-vpc"
+    Name = "character-forge-vpc"
   }
 }
 
+resource "aws_subnet" "public" {
+  vpc_id                  = aws_vpc.Character_forge.id
+  cidr_block              = "10.0.1.0/24"
+  map_public_ip_on_launch = true
+
+  tags = {
+    Name = "character-forge-public-subnet"
+  }
+}
+
+resource "aws_internet_gateway" "character_forge" {
+  vpc_id = aws_vpc.Character_forge.id
+
+  tags = {
+    Name = "character-forge-igw"
+  }
+}
+
+resource "aws_route_table" "public" {
+  vpc_id = aws_vpc.Character_forge.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.character_forge.id
+  }
+
+  tags = {
+    Name = "character-forge-public-rt"
+  }
+}
+
+resource "aws_route_table_association" "public" {
+  subnet_id      = aws_subnet.public.id
+  route_table_id = aws_route_table.public.id
+}
+
+
+resource "aws_security_group" "web" {
+  name        = "character-forge-web-rg"
+  description = "Allow HTTP and SSH traffic"
+  vpc_id      = aws_vpc.Character_forge.id
+  tags = {
+    name = "character-forge-web-sg"
+  }
+}
+
+resource "aws_vpc_security_group_ingress_rule" "http" {
+  security_group_id = aws_security_group.web.id
+
+  from_port   = 80
+  to_port     = 80
+  ip_protocol = "tcp"
+  cidr_ipv4   = "0.0.0.0/0"
+}
+
+
+resource "aws_vpc_security_group_ingress_rule" "SSH" {
+  security_group_id = aws_security_group.web.id
+  ip_protocol       = "tcp"
+  from_port         = 22
+  to_port           = 22
+  cidr_ipv4         = "0.0.0.0/0"
+}
+
+resource "aws_vpc_security_group_egress_rule" "all_outbound" {
+  security_group_id = aws_security_group.web.id
+
+  cidr_ipv4   = "0.0.0.0/0"
+  ip_protocol = -1
+}
+
+data "aws_ami" "amazon_linux" {
+  most_recent = true
+  owners      = ["amazon"]
+
+  filter {
+    name   = "name"
+    values = ["al2023-ami-2023.*-x86_64"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+
+}
+
+
+
+
+resource "aws_instance" "character_forge" {
+  ami                    = data.aws_ami.amazon_linux.id
+  instance_type          = "t3.micro"
+  subnet_id              = aws_subnet.public.id
+  vpc_security_group_ids = [aws_security_group.web.id]
+  key_name               = aws_key_pair.character_forge.key_name
+
+  tags = {
+    name = "character-forge-server"
+  }
+}
+
+resource "aws_key_pair" "character_forge" {
+  key_name   = "character-forge-key"
+  public_key = file("${path.module}/../character-forge-key-new.pub")
+
+  tags = {
+    name = "character-forge-key"
+  }
+}

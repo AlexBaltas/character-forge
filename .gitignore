@@ -1,0 +1,9 @@
+character-forge-key
+character-forge-key.pub
+
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.*
+
+character-forge-key-new
+character-forge-key-new.pub
