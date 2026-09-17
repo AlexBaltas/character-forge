@@ -178,7 +178,7 @@ resource "aws_iam_role" "github_actions" {
         Condition = {
           StringEquals = {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
-            "token.actions.githubusercontent.com:sub" = "repo:AlexBaltas/character-forge:ref:refs/heads/main"
+            "token.actions.githubusercontent.com:sub" = "repo:AlexBaltas@56007143/character-forge@1355262975:ref:refs/heads/main"
           }
         }
       }
