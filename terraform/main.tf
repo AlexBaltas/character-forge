@@ -99,11 +99,12 @@ data "aws_ami" "amazon_linux" {
 
 
 resource "aws_instance" "character_forge" {
-  ami                    = data.aws_ami.amazon_linux.id
+  ami                    = var.ami_id
   instance_type          = "t3.micro"
   subnet_id              = aws_subnet.public.id
   vpc_security_group_ids = [aws_security_group.web.id]
   key_name               = aws_key_pair.character_forge.key_name
+  iam_instance_profile   = aws_iam_instance_profile.character_forge.name
 
   tags = {
     name = "character-forge-server"
@@ -117,4 +118,34 @@ resource "aws_key_pair" "character_forge" {
   tags = {
     name = "character-forge-key"
   }
+}
+
+resource "aws_iam_role" "ec2_ecr_role" {
+  name = "character-forge-ec2-ecr-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [
+      {
+        Effect = "Allow"
+
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ecr_read_only" {
+  role       = aws_iam_role.ec2_ecr_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+}
+
+resource "aws_iam_instance_profile" "character_forge" {
+  name = "character-forge-instance-profile"
+  role = aws_iam_role.ec2_ecr_role.name
 }
